@@ -1,11 +1,25 @@
-"use client";
+"use client"; // if you're using Next.js 13 app dir with client components
 
+import { useSession, signIn } from "next-auth/react";
+import { useEffect } from "react";
 import { Header } from "@/components/header";
 import { Sidebar } from "@/components/sidebar";
 import { WorkLogList } from "@/components/work-log-list";
 import { WorkLogDialog } from "@/components/work-log-dialog";
+import { DashboardLoading } from "@/components/skeleton";
 
 export default function Dashboard() {
+    const { data: session, status } = useSession();
+
+    useEffect(() => {
+        if (status === "unauthenticated") {
+            signIn(); // redirect to login page
+        }
+    }, [status]);
+
+    if (status === "loading" || !session) {
+        return <DashboardLoading />;
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-emerald-50/30">

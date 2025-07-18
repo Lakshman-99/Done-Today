@@ -25,25 +25,51 @@ import {
     CheckSquare,
     Target,
 } from "lucide-react";
-import { useRouter } from 'next/navigation'
+import { useSession, signIn } from "next-auth/react";
+import { redirect } from "next/navigation";
+
 
 export default function SignupForm() {
+    const { status } = useSession();
+    if (status === "authenticated") {
+        redirect('/dashboard');
+    }
+
     const [step, setStep] = useState<"email" | "otp">("email");
     const [email, setEmail] = useState("");
     const [otp, setOtp] = useState("");
     const [rememberMe, setRememberMe] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const router = useRouter();
+
+    const [emailError, setEmailError] = useState<string | null>(null);
+    const [otpError, setOtpError] = useState<string | null>(null);
 
     const handleEmailSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email) return;
 
         setIsLoading(true);
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setIsLoading(false);
-        setStep("otp");
+        try {
+            const res = await fetch("/api/auth/send-otp", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ email }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.message || data.error || "Failed to send OTP.");
+            }
+            setEmailError(null);
+            setStep("otp");
+        } catch (error: any) {
+            setEmailError(error.message || "Failed to send OTP. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleOtpSubmit = async (e: React.FormEvent) => {
@@ -51,12 +77,27 @@ export default function SignupForm() {
         if (otp.length !== 6) return;
 
         setIsLoading(true);
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setIsLoading(false);
         
-        // Redirect to dashboard
-        router.push('/dashboard');
+        try {
+            const res = await signIn("credentials", {
+                email,
+                otp,
+                redirect: false,
+            });
+
+            if (!res?.ok) {
+                const raw = res?.error || "";
+                const message = decodeURIComponent(raw);
+                setOtpError(message);
+            } else {
+                setOtpError(null);
+                redirect('/dashboard');
+            }            
+        } catch (error: any) {
+            setOtpError(error.message || "Invalid OTP. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleBack = () => {
@@ -102,7 +143,7 @@ export default function SignupForm() {
                             </CardTitle>
                             <CardDescription className="text-gray-600 text-base">
                                 {step === "email"
-                                    ? "Track your daily tasks"
+                                    ? ""
                                     : `We've sent a verification code to ${email}`}
                             </CardDescription>
                         </div>
@@ -134,6 +175,11 @@ export default function SignupForm() {
                                             required
                                         />
                                     </div>
+                                    {emailError && (
+                                        <p className="text-sm text-red-500">
+                                            {emailError}
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div className="flex items-center space-x-3">
@@ -200,6 +246,11 @@ export default function SignupForm() {
                                             </InputOTPGroup>
                                         </InputOTP>
                                     </div>
+                                    {otpError && (
+                                        <p className="text-sm text-red-500 text-center">
+                                            {otpError}
+                                        </p>
+                                    )}
 
                                     <div className="text-center">
                                         <p className="text-sm text-gray-500 mb-2">
@@ -208,8 +259,8 @@ export default function SignupForm() {
                                         <button
                                             type="button"
                                             className="text-sm text-emerald-600 hover:text-emerald-700 font-medium hover:underline transition-colors duration-200"
-                                            onClick={() =>
-                                                console.log("Resend code")
+                                            onClick={(e) =>
+                                                handleEmailSubmit(e)
                                             }
                                         >
                                             Resend verification code

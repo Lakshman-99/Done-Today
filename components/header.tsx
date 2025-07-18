@@ -1,7 +1,9 @@
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { CheckSquare, Target, Edit3, Eye, User } from "lucide-react"
+import { CheckSquare, Target, Edit3, Eye, User, LogOut } from "lucide-react"
 import { useWorkLogStore } from "../store/worklog-store"
+import { signOut } from "next-auth/react"
 
 export function Header() {
   const userRole = useWorkLogStore((state) => state.userRole)
@@ -34,11 +36,16 @@ export function Header() {
               {userRole === "creator" ? <Edit3 className="w-3 h-3 mr-1" /> : <Eye className="w-3 h-3 mr-1" />}
               {userRole}
             </Badge>
-            <Avatar>
-              <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-blue-500 text-white">
-                <User className="w-4 h-4" />
-              </AvatarFallback>
-            </Avatar>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => signOut()}
+              className="text-sm gap-1"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </Button>
           </div>
         </div>
       </div>
